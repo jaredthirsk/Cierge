@@ -17,21 +17,24 @@ using System.IO;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.Extensions.Logging;
 
 namespace Cierge
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration, IHostingEnvironment env)
+        public Startup(IConfiguration configuration, IHostingEnvironment env, ILogger<Startup> logger)
         {
             Configuration = configuration;
             Env = env;
             SigningKey = new RsaSecurityKey(GetRsaSigningKey());
+            this.logger = logger;
         }
 
         public IConfiguration Configuration { get; }
         public IHostingEnvironment Env { get; }
         public SecurityKey SigningKey { get; }
+        private ILogger logger;
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -50,12 +53,19 @@ namespace Cierge
 
             services.AddMvc();
 
-            services.AddDbContext<ApplicationDbContext>(options =>
+            if (string.IsNullOrWhiteSpace(Configuration.GetConnectionString("DefaultConnection")))
             {
-                options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"));
+                logger.LogError("Missing ConnectionStrings:DefaultConnection (e.g. \"Host=db; Username=postgres; Password=\")");
+            }
+            else
+            {
+                services.AddDbContext<ApplicationDbContext>(options =>
+                {
+                    options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"));
 
-                options.UseOpenIddict();
-            });
+                    options.UseOpenIddict();
+                });
+            }
 
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
@@ -118,12 +128,22 @@ namespace Cierge
 
             if (Env.IsDevelopment())
             {
+                logger.LogInformation("------ DEVELOPMENT MODE (fake email/sms senders) -----");
                 services.AddTransient<IEmailSender, DevMessageSender>();
                 services.AddTransient<ISmsSender, DevMessageSender>();
             }
             else
             {
-                services.AddScoped<IEmailSender, SmtpMessageSender>();
+                if (!string.IsNullOrWhiteSpace(Configuration["SendGrid:ApiKey"]))
+                {
+                    logger.LogDebug("------ Using Sendgrid -----");
+                    services.AddScoped<IEmailSender, SendGridMessageSender>();
+                }
+                else
+                {
+                    logger.LogDebug("------ Using SMTP -----");
+                    services.AddScoped<IEmailSender, SmtpMessageSender>();
+                }
             }
 
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
