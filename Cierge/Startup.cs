@@ -1,7 +1,3 @@
-using System;
-using System.IdentityModel.Tokens.Jwt;
-using System.IO;
-using System.Security.Cryptography;
 using AspNet.Security.OpenIdConnect.Primitives;
 using Cierge.Data;
 using Cierge.Filters;
@@ -15,12 +11,16 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using OpenIddict;
 using OpenIddict.Core;
 using OpenIddict.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.IO;
+using System.Security.Cryptography;
 
 namespace Cierge
 {
@@ -62,12 +62,12 @@ namespace Cierge
             }
             else
             {
-            services.AddDbContext<ApplicationDbContext>(options =>
-            {
-	            if (Env.IsDevelopment() && bool.TryParse(Configuration["Cierge:InMemoryDb"], out var inMemoryDb) && inMemoryDb )
-		            options.UseInMemoryDatabase("ApplicationDbContext");
-	            else
-		            options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"));
+                services.AddDbContext<ApplicationDbContext>(options =>
+                {
+                    if (Env.IsDevelopment() && bool.TryParse(Configuration["Cierge:InMemoryDb"], out var inMemoryDb) && inMemoryDb)
+                        options.UseInMemoryDatabase("ApplicationDbContext");
+                    else
+                        options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"));
 
                     options.UseOpenIddict();
                 });
@@ -195,9 +195,9 @@ namespace Cierge
                 {
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
-                    ValidateIssuer = false, // TODO: make configurable
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = SigningKey
+                        ValidateIssuer = false, // TODO: make configurable
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = SigningKey
                     };
 
                     options.Audience = Configuration["Cierge:Audience"];
@@ -253,7 +253,7 @@ namespace Cierge
                 // Get RSA JSON from file
                 string jsonString;
                 FileStream fileStream = new FileStream(path, FileMode.Open);
-                using(StreamReader reader = new StreamReader(fileStream))
+                using (StreamReader reader = new StreamReader(fileStream))
                 {
                     jsonString = reader.ReadToEnd();
                 }
