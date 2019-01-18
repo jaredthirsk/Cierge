@@ -7,67 +7,59 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
+using OpenIddict;
 using OpenIddict.Core;
 
-namespace AuthorizationServer.Controllers
-{
-    [Route("api")]
-    public class UserinfoController : Controller
-    {
+namespace AuthorizationServer.Controllers {
+    [Route ("api")]
+    public class UserinfoController : Controller {
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public UserinfoController(UserManager<ApplicationUser> userManager)
-        {
+        public UserinfoController (UserManager<ApplicationUser> userManager) {
             _userManager = userManager;
         }
 
         //
         // GET: /api/userinfo
-        [Authorize(AuthenticationSchemes = OAuthValidationDefaults.AuthenticationScheme)]
-        [HttpGet("userinfo"), Produces("application/json")]
-        public async Task<IActionResult> Userinfo()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return BadRequest(new OpenIdConnectResponse
-                {
+        [Authorize (AuthenticationSchemes = OAuthValidationDefaults.AuthenticationScheme)]
+        [HttpGet ("userinfo"), Produces ("application/json")]
+        public async Task<IActionResult> Userinfo () {
+            var user = await _userManager.GetUserAsync (User);
+            if (user == null) {
+                return BadRequest (new OpenIdConnectResponse {
                     Error = OpenIdConnectConstants.Errors.InvalidGrant,
-                    ErrorDescription = "The user profile is no longer available."
+                        ErrorDescription = "The user profile is no longer available."
                 });
             }
 
-            var claims = new JObject();
-            
+            var claims = new JObject ();
+
             // !! ADDING FIELD: this will include FavColor in the OIDC userinfo endpoint
-            var favColor = user.FavColor?.ToString() ?? "";
-            claims.Add("favColor", favColor);
+            var favColor = user.FavColor?.ToString () ?? "";
+            claims.Add ("favColor", favColor);
 
             // Note: the "sub" claim is a mandatory claim and must be included in the JSON response.
-            claims[OpenIdConnectConstants.Claims.Subject] = await _userManager.GetUserIdAsync(user);
+            claims[OpenIdConnectConstants.Claims.Subject] = await _userManager.GetUserIdAsync (user);
 
-            if (User.HasClaim(OpenIdConnectConstants.Claims.Scope, OpenIdConnectConstants.Scopes.Email))
-            {
-                claims[OpenIdConnectConstants.Claims.Email] = await _userManager.GetEmailAsync(user);
-                claims[OpenIdConnectConstants.Claims.EmailVerified] = await _userManager.IsEmailConfirmedAsync(user);
-                claims[OpenIdConnectConstants.Claims.Name] = await _userManager.GetUserNameAsync(user);
+            if (User.HasClaim (OpenIdConnectConstants.Claims.Scope, OpenIdConnectConstants.Scopes.Email)) {
+                claims[OpenIdConnectConstants.Claims.Email] = await _userManager.GetEmailAsync (user);
+                claims[OpenIdConnectConstants.Claims.EmailVerified] = await _userManager.IsEmailConfirmedAsync (user);
+                claims[OpenIdConnectConstants.Claims.Name] = await _userManager.GetUserNameAsync (user);
             }
 
-            if (User.HasClaim(OpenIdConnectConstants.Claims.Scope, OpenIdConnectConstants.Scopes.Phone))
-            {
-                claims[OpenIdConnectConstants.Claims.PhoneNumber] = await _userManager.GetPhoneNumberAsync(user);
-                claims[OpenIdConnectConstants.Claims.PhoneNumberVerified] = await _userManager.IsPhoneNumberConfirmedAsync(user);
+            if (User.HasClaim (OpenIdConnectConstants.Claims.Scope, OpenIdConnectConstants.Scopes.Phone)) {
+                claims[OpenIdConnectConstants.Claims.PhoneNumber] = await _userManager.GetPhoneNumberAsync (user);
+                claims[OpenIdConnectConstants.Claims.PhoneNumberVerified] = await _userManager.IsPhoneNumberConfirmedAsync (user);
             }
 
-            if (User.HasClaim(OpenIdConnectConstants.Claims.Scope, OpenIddictConstants.Scopes.Roles))
-            {
-                claims["roles"] = JArray.FromObject(await _userManager.GetRolesAsync(user));
+            if (User.HasClaim (OpenIdConnectConstants.Claims.Scope, OpenIddictConnectConstants.Scopes.Roles)) {
+                claims["roles"] = JArray.FromObject (await _userManager.GetRolesAsync (user));
             }
 
             // Note: the complete list of standard claims supported by the OpenID Connect specification
             // can be found here: http://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
 
-            return Json(claims);
+            return Json (claims);
         }
     }
 }

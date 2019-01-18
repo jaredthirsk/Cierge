@@ -1,40 +1,33 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using AspNet.Security.OpenIdConnect.Extensions;
 using AspNet.Security.OpenIdConnect.Primitives;
 using AspNet.Security.OpenIdConnect.Server;
+using Cierge.Data;
+using Cierge.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using OpenIddict.Core;
 using Microsoft.Extensions.Configuration;
-using Cierge.Services;
-using Cierge.Data;
-using System.Security.Claims;
+using Microsoft.Extensions.Options;
+using OpenIddict;
 
-/*
- *  This code is adapted from OpenIddict, which is licensed under Apache 2.0 
- */
-
-namespace Cierge.Controllers
-{
-    public class AuthorizationController : Controller
-    {
+namespace Cierge.Controllers {
+    public class AuthorizationController : Controller {
         private readonly NoticeService _notice;
         private readonly IConfiguration _configuration;
         private readonly IOptions<IdentityOptions> _identityOptions;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public AuthorizationController(
+        public AuthorizationController (
             NoticeService notice,
             IConfiguration configuration,
             IOptions<IdentityOptions> identityOptions,
             SignInManager<ApplicationUser> signInManager,
-            UserManager<ApplicationUser> userManager)
-        {
+            UserManager<ApplicationUser> userManager) {
             _notice = notice;
             _configuration = configuration;
             _identityOptions = identityOptions;
@@ -42,114 +35,103 @@ namespace Cierge.Controllers
             _userManager = userManager;
         }
 
-        [HttpGet("~/connect/authorize")]
-        public async Task<IActionResult> Authorize(OpenIdConnectRequest request)
-        {
-            if (!User.Identity.IsAuthenticated)
-            {
+        [HttpGet ("~/connect/authorize")]
+        public async Task<IActionResult> Authorize (OpenIdConnectRequest request) {
+            if (!User.Identity.IsAuthenticated) {
                 // If the client application request promptless authentication,
                 // return an error indicating that the user is not logged in.
-                if (request.HasPrompt(OpenIdConnectConstants.Prompts.None))
-                {
-                    var properties = new AuthenticationProperties(new Dictionary<string, string>
-                    {
+                if (request.HasPrompt (OpenIdConnectConstants.Prompts.None)) {
+                    var properties = new AuthenticationProperties (new Dictionary<string, string> {
                         [OpenIdConnectConstants.Properties.Error] = OpenIdConnectConstants.Errors.LoginRequired,
                         [OpenIdConnectConstants.Properties.ErrorDescription] = "The user is not logged in."
                     });
 
                     // Ask OpenIddict to return a login_required error to the client application.
-                    return Forbid(properties, OpenIdConnectServerDefaults.AuthenticationScheme);
+                    return Forbid (properties, OpenIdConnectServerDefaults.AuthenticationScheme);
                 }
 
-                return Challenge();
+                return Challenge ();
             }
 
             // Retrieve the profile of the logged in user.
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return _notice.Error(this, OpenIdConnectConstants.Errors.ServerError);
+            var user = await _userManager.GetUserAsync (User);
+            if (user == null) {
+                return _notice.Error (this, OpenIdConnectConstants.Errors.ServerError);
             }
 
             // Create a new authentication ticket.
-            var ticket = await CreateTicketAsync(request, user);
+            var ticket = await CreateTicketAsync (request, user);
 
             // Returning a SignInResult will ask OpenIddict to issue the appropriate access/identity tokens.
-            return SignIn(ticket.Principal, ticket.Properties, ticket.AuthenticationScheme);
+            return SignIn (ticket.Principal, ticket.Properties, ticket.AuthenticationScheme);
         }
 
-        [HttpGet("~/connect/logout")]
-        public async Task<IActionResult> Logout()
-        {
+        [HttpGet ("~/connect/logout")]
+        public async Task<IActionResult> Logout () {
             // Ask ASP.NET Core Identity to delete the local and external cookies created
             // when the user agent is redirected from the external identity provider
             // after a successful authentication flow (e.g Google or Facebook).
-            await _signInManager.SignOutAsync();
+            await _signInManager.SignOutAsync ();
 
             // Returning a SignOutResult will ask OpenIddict to redirect the user agent
             // to the post_logout_redirect_uri specified by the client application.
-            return SignOut(OpenIdConnectServerDefaults.AuthenticationScheme);
+            return SignOut (OpenIdConnectServerDefaults.AuthenticationScheme);
         }
 
-        private async Task<AuthenticationTicket> CreateTicketAsync(OpenIdConnectRequest request, ApplicationUser user)
-        {
+        private async Task<AuthenticationTicket> CreateTicketAsync (OpenIdConnectRequest request, ApplicationUser user) {
             // Create a new ClaimsPrincipal containing the claims that
             // will be used to create an id_token, a token or a code.
-            var principal = await _signInManager.CreateUserPrincipalAsync(user);
+            var principal = await _signInManager.CreateUserPrincipalAsync (user);
 
-            var identity = (ClaimsIdentity)principal.Identity;
+            var identity = (ClaimsIdentity) principal.Identity;
 
-            // !! ADDING FIELD: this will include FavColor in generated JWT access tokens & id tokens
-            var favColorClaim = new Claim("favColor", user.FavColor?.ToString() ?? "", ClaimValueTypes.String);
-            favColorClaim.SetDestinations(OpenIdConnectConstants.Destinations.AccessToken, OpenIdConnectConstants.Destinations.IdentityToken);
-            identity.AddClaim(favColorClaim);
+            /*  !! ADDING FIELD: this will include FavColor in generated JWT access tokens & id tokens */
+            var favColorClaim = new Claim ("favColor", user.FavColor?.ToString () ?? "", ClaimValueTypes.String);
+            favColorClaim.SetDestinations (OpenIdConnectConstants.Destinations.AccessToken, OpenIdConnectConstants.Destinations.IdentityToken);
+            identity.AddClaim (favColorClaim);
 
             // Create a new authentication ticket holding the user identity.
-            var ticket = new AuthenticationTicket(principal,
-                new AuthenticationProperties(),
+            var ticket = new AuthenticationTicket (principal,
+                new AuthenticationProperties (),
                 OpenIdConnectServerDefaults.AuthenticationScheme);
 
             // Set the list of scopes granted to the client application.
-            ticket.SetScopes(new[]
-            {
+            ticket.SetScopes (new [] {
                 OpenIdConnectConstants.Scopes.OpenId,
-                OpenIdConnectConstants.Scopes.Email,
-                OpenIdConnectConstants.Scopes.Profile,
-                OpenIddictConstants.Scopes.Roles
-            }.Intersect(request.GetScopes()));
+                    OpenIdConnectConstants.Scopes.Email,
+                    OpenIdConnectConstants.Scopes.Profile,
+                    OpenIddictConnectConstants.Scopes.Roles
 
-            ticket.SetResources(_configuration["Cierge:Audience"]);
+            }.Intersect (request.GetScopes ()));
+
+            ticket.SetResources (_configuration["Cierge:Audience"]);
 
             // Note: by default, claims are NOT automatically included in the access and identity tokens.
             // To allow OpenIddict to serialize them, you must attach them a destination, that specifies
             // whether they should be included in access tokens, in identity tokens or in both.
-            
-            foreach (var claim in ticket.Principal.Claims)
-            {
+
+            foreach (var claim in ticket.Principal.Claims) {
                 // Never include the security stamp in the access and identity tokens, as it's a secret value.
-                if (claim.Type == _identityOptions.Value.ClaimsIdentity.SecurityStampClaimType)
-                {
+                if (claim.Type == _identityOptions.Value.ClaimsIdentity.SecurityStampClaimType) {
                     continue;
                 }
 
-                var destinations = new List<string>
-                {
+                var destinations = new List<string> {
                     OpenIdConnectConstants.Destinations.AccessToken
                 };
 
                 // Only add the iterated claim to the id_token if the corresponding scope was granted to the client application.
                 // The other claims will only be added to the access_token, which is encrypted when using the default format.
-                if ((claim.Type == OpenIdConnectConstants.Claims.Name && ticket.HasScope(OpenIdConnectConstants.Scopes.Profile)) ||
-                    (claim.Type == OpenIdConnectConstants.Claims.Email && ticket.HasScope(OpenIdConnectConstants.Scopes.Email)) ||
-                    (claim.Type == OpenIdConnectConstants.Claims.Role && ticket.HasScope(OpenIddictConstants.Claims.Roles)))
-                {
-                    destinations.Add(OpenIdConnectConstants.Destinations.IdentityToken);
+                if ((claim.Type == OpenIdConnectConstants.Claims.Name && ticket.HasScope (OpenIdConnectConstants.Scopes.Profile)) ||
+                    (claim.Type == OpenIdConnectConstants.Claims.Email && ticket.HasScope (OpenIdConnectConstants.Scopes.Email)) ||
+                    (claim.Type == OpenIdConnectConstants.Claims.Role && ticket.HasScope (OpenIddictConnectConstants.Scopes.Roles))) {
+
+                    destinations.Add (OpenIdConnectConstants.Destinations.IdentityToken);
                 }
 
-                claim.SetDestinations(destinations);
-                
-            }
+                claim.SetDestinations (destinations);
 
+            }
 
             return ticket;
         }

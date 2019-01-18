@@ -1,22 +1,25 @@
-﻿using System;
+using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.IO;
+using System.Security.Cryptography;
+using AspNet.Security.OpenIdConnect.Primitives;
+using Cierge.Data;
+using Cierge.Filters;
+using Cierge.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Cierge.Data;
-using Cierge.Services;
-using AspNet.Security.OpenIdConnect.Primitives;
 using Microsoft.IdentityModel.Tokens;
-using System.Security.Cryptography;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Cierge.Filters;
-using Microsoft.AspNetCore.Http;
-using System.IO;
 using Newtonsoft.Json;
-using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
+using OpenIddict;
+using OpenIddict.Core;
+using OpenIddict.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Cierge
@@ -59,22 +62,24 @@ namespace Cierge
             }
             else
             {
-                services.AddDbContext<ApplicationDbContext>(options =>
-                {
-                    options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"));
+            services.AddDbContext<ApplicationDbContext>(options =>
+            {
+	            if (Env.IsDevelopment() && bool.TryParse(Configuration["Cierge:InMemoryDb"], out var inMemoryDb) && inMemoryDb )
+		            options.UseInMemoryDatabase("ApplicationDbContext");
+	            else
+		            options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"));
 
                     options.UseOpenIddict();
                 });
             }
 
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-            {
-                options.Lockout.AllowedForNewUsers = true;
-                options.User.RequireUniqueEmail = false;
-            })
+                {
+                    options.Lockout.AllowedForNewUsers = true;
+                    options.User.RequireUniqueEmail = false;
+                })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
-            
 
             if (!String.IsNullOrWhiteSpace(Configuration["ExternalAuth:Google:ClientId"]))
             {
@@ -92,38 +97,63 @@ namespace Cierge
                 options.ClaimsIdentity.RoleClaimType = OpenIdConnectConstants.Claims.Role;
             });
 
-            services.AddOpenIddict(options =>
-            {
-                options.AddEntityFrameworkCoreStores<ApplicationDbContext>();
-                options.AddMvcBinders();
-                options.EnableAuthorizationEndpoint("/connect/authorize")
-                       .EnableLogoutEndpoint("/connect/logout")
-                       .EnableIntrospectionEndpoint("/connect/introspect")
-                       .EnableUserinfoEndpoint("/api/userinfo");
-                options.AllowImplicitFlow();
+            // Register the OpenIddict services.
+            services.AddOpenIddict()
+                .AddCore(options =>
+                {
+                    options.UseEntityFrameworkCore()
+                        .UseDbContext<ApplicationDbContext>();
+                });
 
-                options.SetAccessTokenLifetime(new TimeSpan(1, 0, 0));
+            services.AddOpenIddict()
+                .AddCore(options =>
+                {
+                    options.UseEntityFrameworkCore().UseDbContext<ApplicationDbContext>();
+                })
+                .AddServer(options =>
+                {
+                    options.UseMvc();
 
-                if (!String.IsNullOrWhiteSpace(issuer))
-                    options.SetIssuer(new Uri(issuer));
+                    options.UseJsonWebTokens();
 
-                if (!requireHttps)
-                    options.DisableHttpsRequirement();
+                    options.EnableAuthorizationEndpoint("/connect/authorize")
+                        .EnableLogoutEndpoint("/connect/logout")
+                        .EnableTokenEndpoint("/connect/token")
+                        .EnableUserinfoEndpoint("/api/userinfo")
+                        .EnableIntrospectionEndpoint("/api/introspect");
 
-                if (Env.IsDevelopment())
-                    options.AddEphemeralSigningKey();
-                else
-                    options.AddSigningKey(SigningKey);
+                    options.AllowAuthorizationCodeFlow()
+                        .AllowPasswordFlow()
+                        .AllowRefreshTokenFlow();
 
-                options.UseJsonWebTokens();
-            });
+                    options.RegisterScopes(
+                        //OpenIdConnectConstants.Scopes.OpenId,
+                        OpenIdConnectConstants.Scopes.Email,
+                        OpenIdConnectConstants.Scopes.Profile,
+                        //OpenIdConnectConstants.Scopes.OfflineAccess,
+                        OpenIddictConnectConstants.Scopes.Roles
+                    );
+
+                    if (!String.IsNullOrWhiteSpace(issuer))
+                        options.SetIssuer(new Uri(issuer));
+
+                    if (!requireHttps)
+                        options.DisableHttpsRequirement();
+
+                    if (Env.IsDevelopment())
+                        options.AddEphemeralSigningKey();
+                    else
+                        options.AddSigningKey(SigningKey);
+
+                    options.EnableRequestCaching();
+
+                });
 
             services.AddCors(options =>
             {
-                options.AddPolicy("AllowSpecificOrigin",
-                    builder => builder.WithOrigins("http://localhost:8000")
-                                .AllowAnyMethod()
-                                .AllowAnyHeader());
+                options.AddPolicy("AllowSpecificOrigin", builder => builder.WithOrigins("http://localhost:8000")
+                    .AllowAnyMethod()
+                    .AllowAnyHeader());
             });
 
             if (Env.IsDevelopment())
@@ -158,16 +188,16 @@ namespace Cierge
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
             JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
             services.AddAuthentication(options =>
-            {
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
+                {
+                    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                })
                 .AddJwtBearer(options =>
                 {
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
-                        ValidateIssuer = false, // TODO: make configurable
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = SigningKey
+                    ValidateIssuer = false, // TODO: make configurable
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = SigningKey
                     };
 
                     options.Audience = Configuration["Cierge:Audience"];
@@ -223,7 +253,7 @@ namespace Cierge
                 // Get RSA JSON from file
                 string jsonString;
                 FileStream fileStream = new FileStream(path, FileMode.Open);
-                using (StreamReader reader = new StreamReader(fileStream))
+                using(StreamReader reader = new StreamReader(fileStream))
                 {
                     jsonString = reader.ReadToEnd();
                 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +8,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Core;
-using OpenIddict.Models;
+using OpenIddict.Mvc;
+using OpenIddict.EntityFrameworkCore;
 
 namespace Cierge
 {
@@ -28,7 +29,7 @@ namespace Cierge
 
                     try
                     {
-                        InitializeAsync(services, CancellationToken.None).GetAwaiter().GetResult();
+//                        InitializeAsync(services, CancellationToken.None).GetAwaiter().GetResult();
                     }
                     catch (Exception ex)
                     {
@@ -46,7 +47,7 @@ namespace Cierge
             WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
                 .Build();
-
+/*
 
         private static async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken)
         {
@@ -79,6 +80,6 @@ namespace Cierge
                 }
             }
         }
-        
+       */ 
     }
 }
