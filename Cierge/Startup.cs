@@ -151,9 +151,29 @@ namespace Cierge
 
             services.AddCors(options =>
             {
-                options.AddPolicy("AllowSpecificOrigin", builder => builder.WithOrigins("http://localhost:8000")
-                    .AllowAnyMethod()
-                    .AllowAnyHeader());
+                options.AddPolicy("AllowSpecificOrigin", builder =>
+                {
+
+                    var origins = Configuration["Cors:Origins"];
+                    if(string.IsNullOrWhiteSpace(origins)) { origins = "http://localhost:8000"; }
+                    if(origins == "*")
+                    {
+                        logger.LogInformation("CORS origins: allowing all");
+                        builder.AllowAnyOrigin();
+                    }
+                    else if(origins == "none")
+                    {
+                        logger.LogInformation("CORS origins: allowing none");
+                    }
+                    else
+                    {
+                        logger.LogInformation("CORS origins: allowing " + origins);
+                        builder.WithOrigins(origins.Split(',',' '));
+                    }
+
+                    builder.AllowAnyMethod()
+                        .AllowAnyHeader();
+                });
             });
 
             if (Env.IsDevelopment())
