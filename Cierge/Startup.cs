@@ -41,7 +41,9 @@ namespace Cierge
 
         public void ConfigureServices(IServiceCollection services)
         {
-            // Disabling HTTPS requirement is default since it is assumed that
+            logger.LogInformation("Cors origins: " + Configuration["Cors:Origins"]);
+
+             // Disabling HTTPS requirement is default since it is assumed that
             // this is running behind a reverse proxy that requires HTTPS
             var requireHttps = !String.IsNullOrWhiteSpace(Configuration["RequireHttps"]) && Boolean.Parse(Configuration["RequireHttps"]) == true;
 
@@ -49,29 +51,36 @@ namespace Cierge
             var issuer = Configuration["Cierge:Issuer"];
 
             if (requireHttps)
+            {
                 services.Configure<MvcOptions>(options =>
                 {
                     options.Filters.Add(new RequireHttpsAttribute());
                 });
+            }
 
             services.AddMvc();
 
-            if (string.IsNullOrWhiteSpace(Configuration.GetConnectionString("DefaultConnection")))
+            services.AddDbContext<ApplicationDbContext>(options =>
             {
-                logger.LogError("Missing ConnectionStrings:DefaultConnection (e.g. \"Host=db; Username=postgres; Password=\")");
-            }
-            else
-            {
-                services.AddDbContext<ApplicationDbContext>(options =>
+                if (/*Env.IsDevelopment() &&*/ bool.TryParse(Configuration["Cierge:InMemoryDb"], out var inMemoryDb) && inMemoryDb)
                 {
-                    if (Env.IsDevelopment() && bool.TryParse(Configuration["Cierge:InMemoryDb"], out var inMemoryDb) && inMemoryDb)
-                        options.UseInMemoryDatabase("ApplicationDbContext");
+                    options.UseInMemoryDatabase("ApplicationDbContext");
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(Configuration.GetConnectionString("DefaultConnection")))
+                    {
+                        logger.LogError("Missing ConnectionStrings:DefaultConnection (e.g. \"Host=db; Username=postgres; Password=\")");
+                    }
                     else
+                    {
                         options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"));
+                    }
+                }
 
-                    options.UseOpenIddict();
-                });
-            }
+                options.UseOpenIddict();
+            });
+
 
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
                 {
@@ -135,15 +144,23 @@ namespace Cierge
                     );
 
                     if (!String.IsNullOrWhiteSpace(issuer))
+                    {
                         options.SetIssuer(new Uri(issuer));
+                    }
 
                     if (!requireHttps)
+                    {
                         options.DisableHttpsRequirement();
+                    }
 
                     if (Env.IsDevelopment())
+                    {
                         options.AddEphemeralSigningKey();
+                    }
                     else
+                    {
                         options.AddSigningKey(SigningKey);
+                    }
 
                     options.EnableRequestCaching();
 
@@ -155,20 +172,20 @@ namespace Cierge
                 {
 
                     var origins = Configuration["Cors:Origins"];
-                    if(string.IsNullOrWhiteSpace(origins)) { origins = "http://localhost:8000"; }
-                    if(origins == "*")
+                    if (string.IsNullOrWhiteSpace(origins)) { origins = "http://localhost:8000"; }
+                    if (origins == "*")
                     {
                         logger.LogInformation("CORS origins: allowing all");
                         builder.AllowAnyOrigin();
                     }
-                    else if(origins == "none")
+                    else if (origins == "none")
                     {
                         logger.LogInformation("CORS origins: allowing none");
                     }
                     else
                     {
                         logger.LogInformation("CORS origins: allowing " + origins);
-                        builder.WithOrigins(origins.Split(',',' '));
+                        builder.WithOrigins(origins.Split(',', ' '));
                     }
 
                     builder.AllowAnyMethod()
@@ -178,7 +195,7 @@ namespace Cierge
 
             if (Env.IsDevelopment())
             {
-                logger.LogInformation("------ DEVELOPMENT MODE (fake email/sms senders) -----");
+                logger.LogInformation("Email: ------ DEVELOPMENT MODE (fake email/sms senders) -----");
                 services.AddTransient<IEmailSender, DevMessageSender>();
                 services.AddTransient<ISmsSender, DevMessageSender>();
             }
@@ -186,13 +203,18 @@ namespace Cierge
             {
                 if (!string.IsNullOrWhiteSpace(Configuration["SendGrid:ApiKey"]))
                 {
-                    logger.LogDebug("------ Using Sendgrid -----");
+                    logger.LogDebug("Email: using Sendgrid");
                     services.AddScoped<IEmailSender, SendGridMessageSender>();
                 }
-                else
+                else if(!string.IsNullOrWhiteSpace(Configuration["Smtp:Host"]))
                 {
-                    logger.LogDebug("------ Using SMTP -----");
+                    logger.LogDebug("Email: using SMTP");
                     services.AddScoped<IEmailSender, SmtpMessageSender>();
+                }
+                else if (bool.TryParse(Configuration["Cierge:AllowNullEmailSender"], out var allowNullEmailSender) && allowNullEmailSender)
+                {
+                    logger.LogWarning("Email: !!!!! Using Null email sender !!!!!");
+                    services.AddTransient<IEmailSender, DevMessageSender>();
                 }
             }
 
@@ -223,10 +245,14 @@ namespace Cierge
                     options.Audience = Configuration["Cierge:Audience"];
 
                     if (!String.IsNullOrWhiteSpace(issuer))
+                    {
                         options.Authority = issuer;
+                    }
 
                     if (Env.IsDevelopment())
+                    {
                         options.RequireHttpsMetadata = false;
+                    }
                 });
 
             // Allow cross-site cookies 
