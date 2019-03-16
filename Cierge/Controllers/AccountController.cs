@@ -208,7 +208,7 @@ namespace Cierge.Controllers
 
         [HttpPost]
         [AllowAnonymous]
-        [ValidateAntiForgeryToken]
+        //[ValidateAntiForgeryToken]
         [ActionName(nameof(AccountController.TokenInput))]
         [ServiceFilter(typeof(ValidateRecaptchaAttribute))]
         public async Task<IActionResult> SubmitTokenInput(TokenInputViewModel model)
