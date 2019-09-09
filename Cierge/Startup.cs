@@ -117,14 +117,13 @@ namespace Cierge
             services.AddOpenIddict()
                 .AddCore(options =>
                 {
-                    options.UseEntityFrameworkCore().UseDbContext<ApplicationDbContext>();
+                    options
+                        .UseEntityFrameworkCore()
+                        .UseDbContext<ApplicationDbContext>();
                 })
                 .AddServer(options =>
                 {
                     options.UseMvc();
-
-                    options.UseJsonWebTokens();
-
                     options.EnableAuthorizationEndpoint("/connect/authorize")
                         .EnableLogoutEndpoint("/connect/logout")
                         .EnableTokenEndpoint("/connect/token")
@@ -135,8 +134,11 @@ namespace Cierge
                         .AllowPasswordFlow()
                         .AllowRefreshTokenFlow();
 
+                    options.UseJsonWebTokens();
+
+
                     options.RegisterScopes(
-                        //OpenIdConnectConstants.Scopes.OpenId,
+                        OpenIdConnectConstants.Scopes.OpenId,
                         OpenIdConnectConstants.Scopes.Email,
                         OpenIdConnectConstants.Scopes.Profile,
                         //OpenIdConnectConstants.Scopes.OfflineAccess,
