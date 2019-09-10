@@ -73,7 +73,7 @@ namespace Cierge
             }
         }
 
-        private async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task InitializeAsync(IServiceProvider services)
         {
             logger.LogInformation($"Initializing with domain '{Domain}' and subdomains '{Subdomains}");
 
