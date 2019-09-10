@@ -21,7 +21,7 @@ namespace Cierge.Controllers
 {
     [Authorize]
     [Route("[controller]/[action]")]
-    public class AccountController : Controller
+    public partial class AccountController : Controller
     {
         private readonly EventsService _events;
         private readonly NoticeService _notice;
@@ -79,123 +79,38 @@ namespace Cierge.Controllers
             return View(model);
         }
 
+
         [HttpPost]
         [AllowAnonymous]
-        //[ValidateAntiForgeryToken]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model, string returnUrl = null)
         {
-            if (!ModelState.IsValid)
-                return View(model);
-
-            AuthOperation attemptedOperation;
-
-            ApplicationUser userToSignTokenWith;
-
-            var email = _userManager.NormalizeKey(model.Email);
-
-            var userWithConfirmedEmail = await _userManager.FindByLoginAsync("Email", email);
-            var userCurrentlySignedIn = await _userManager.GetUserAsync(User);          
-
-            if (userCurrentlySignedIn == null) // No locally signed-in user (trying to register or login)
+            var result = await _Login(model, returnUrl);
+            switch (result.Kind)
             {
-                // Clear the existing external cookie to ensure a clean login process
-                await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-
-                if (userWithConfirmedEmail == null) // Email not associated with any other accounts (trying to register)
-                {
-                    userToSignTokenWith = new ApplicationUser()
+                case RequestLoginCodeResult.ModelInvalid:
+                    return View(model);
+                case RequestLoginCodeResult.ReachedMaxLoginsAllowed:
+                    return View(nameof(Login), new LoginViewModel
                     {
-                        Id = email,
-                        Email = email,
-                        SecurityStamp = TemporarySecurityStamp
-                    };
-
-                    attemptedOperation = AuthOperation.Registering;
-                }
-                else // Email associated with an account (trying to login)
-                {
-                    userToSignTokenWith = userWithConfirmedEmail;
-                    attemptedOperation = AuthOperation.LoggingIn;
-                }
-            }
-            else // A user is currently locally signed-in (trying to add email)
-            {
-                userToSignTokenWith = userCurrentlySignedIn;
-
-                if (userWithConfirmedEmail == null) // Email not associated with any other accounts (trying to add a novel email)
-                {
-                    // Check to see if user reached max logins
-                    if (DidReachMaxLoginsAllowed(userCurrentlySignedIn))
-                    {
-                        return View(nameof(Login), new LoginViewModel
+                        MaxLoginsAllowed = MaxLoginsAllowed,
+                        DidReachMaxLoginsAllowed = true
+                    });
+                case RequestLoginCodeResult.EmailAlreadyAssociatedWithAccount:
+                    _notice.AddErrors(ModelState, "This email is already in your account.");
+                    return View(model);
+                case RequestLoginCodeResult.SentEmailCode:
+                    return View(nameof(TokenInput),
+                        new TokenInputViewModel
                         {
-                            MaxLoginsAllowed = MaxLoginsAllowed,
-                            DidReachMaxLoginsAllowed = true
+                            RememberMe = model.RememberMe,
+                            ReturnUrl = returnUrl,
+                            Email = result.Email,
+                            Purpose = result.Purpose
                         });
-                    }
-                    
-                    attemptedOperation = AuthOperation.AddingNovelEmail;
-                }
-                else // Email associated with another user's account
-                {
-                    if (userWithConfirmedEmail.Id == userCurrentlySignedIn.Id) // Email already added to user's account
-                    {
-                        _notice.AddErrors(ModelState, "This email is already in your account.");
-                        return View(model);
-                    }
-                    else // Email associated with another account that's not the user's
-                    {
-                        attemptedOperation = AuthOperation.AddingOtherUserEmail;
-                    }
-                }
+                default:
+                    throw new NotImplementedException();
             }
-
-            var token = "";
-            var purpose = "";
-
-            switch (attemptedOperation)
-            {
-                case AuthOperation.AddingOtherUserEmail:
-                    purpose = "AddEmail";
-                    break;
-                case AuthOperation.AddingNovelEmail:
-                    purpose = "AddEmail";
-                    token = await _userManager.GenerateUserTokenAsync(userToSignTokenWith, "Email", purpose);
-                    break;
-                case AuthOperation.Registering:
-                case AuthOperation.LoggingIn:
-                    purpose = "RegisterOrLogin";
-                    token = await _userManager.GenerateUserTokenAsync(userToSignTokenWith, "Email", purpose);
-                    break;
-            }
-
-            // Add a space every 3 characters for readability
-            token = String.Concat(token.SelectMany((c, i)
-                                            => (i+1) % 3 == 0 ? $"{c} " : $"{c}")).Trim();
-
-            var callbackUrl = Url.TokenInputLink(Request.Scheme,
-                new TokenInputViewModel
-                {
-                    Token = token,
-                    RememberMe = model.RememberMe,
-                    ReturnUrl = returnUrl,
-                    Email = email, 
-                    Purpose = purpose
-                });
-
-            // Will not wait for email to be sent
-            #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            _emailSender.SendTokenAsync(email, attemptedOperation, callbackUrl, token);
-            #pragma warning restore CS4014
-
-            return View(nameof(TokenInput), 
-                new TokenInputViewModel
-                {
-                    RememberMe = model.RememberMe,
-                    ReturnUrl = returnUrl,
-                    Email = email,
-                    Purpose = purpose
-                });
         }
 
 
