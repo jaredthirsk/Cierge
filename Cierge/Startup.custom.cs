@@ -18,31 +18,31 @@ namespace Cierge
         {
             return itemsAsString.Split(' ');
         }
+
+        public static string ReverseDomain(this string domain) => domain.Split('.').Reverse().Aggregate((x, y) => $"{x}.{y}");
     }
     public partial class Startup
     {
         #region Parameters
 
         public string Domain => Configuration["OpenIddict:Domain"];
+        public string ReversedDomain => Configuration["OpenIddict:Domain"].ReverseDomain();
 
         public IEnumerable<string> Subdomains => Configuration["OpenIddict:Subdomains"].ToStringArray().Select(item => item == "null" ? null : item) ?? DefaultSubdomains;
 
         public IEnumerable<string> DefaultSubdomains { get; } = new string[] { null, "dev", "test" };
-        private static string ScopeForSubdomain(string subdomain = "") => subdomain.Contains("test") ? "com.seriousalerts.test" : "com.seriousalerts";
-
+        private string ScopeForSubdomain(string subdomain = "") => ReversedDomain + (subdomain.Contains("test") ? ".test" : "");
 
         #endregion
 
         private async Task AddApplicationIfMissing(OpenIddictApplicationManager<OpenIddictApplication> manager, string subdomain = null)
         {
-            var reversedDomain = Domain.Split('.').Reverse().Aggregate((x, y) => $"{x}.{y}");
-
             var subdomainSuffix = string.IsNullOrEmpty(subdomain) ? "" : ("." + subdomain);
             var subdomainPrefix = string.IsNullOrEmpty(subdomain) ? "" : (subdomain + ".");
             var fullDomain = subdomainPrefix + Domain;
             var scope = ScopeForSubdomain(subdomain);
 
-            var clientId = reversedDomain + subdomainSuffix;
+            var clientId = ReversedDomain + subdomainSuffix;
 
             if (await manager.FindByClientIdAsync(clientId) == null)
             {
@@ -52,8 +52,8 @@ namespace Cierge
                 {
                     ClientId = clientId,
                     DisplayName = fullDomain, // ENH: Make configurable
-                    PostLogoutRedirectUris = { new Uri($"https://{subdomainPrefix}seriousalerts.com/logged-out") },
-                    RedirectUris = { new Uri($"http://{subdomainPrefix}seriousalerts.com/oidc/redirect") },
+                    PostLogoutRedirectUris = { new Uri($"https://{subdomainPrefix}{Domain}/logged-out") },
+                    RedirectUris = { new Uri($"http://{subdomainPrefix}{Domain}/oidc/redirect") },
 
                     Permissions =
                             {
