@@ -17,14 +17,17 @@ using Newtonsoft.Json;
 using OpenIddict;
 using OpenIddict.Core;
 using OpenIddict.EntityFrameworkCore;
+using OpenIddict.EntityFrameworkCore.Models;
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Cierge
 {
-    public class Startup
+    public partial class Startup
     {
         public Startup(IConfiguration configuration, IHostingEnvironment env, ILogger<Startup> logger)
         {
@@ -85,7 +88,7 @@ namespace Cierge
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
                 {
                     options.Lockout.AllowedForNewUsers = true;
-                    options.User.RequireUniqueEmail = false;
+                    options.User.RequireUniqueEmail = true;
                 })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
@@ -112,14 +115,6 @@ namespace Cierge
                 {
                     options.UseEntityFrameworkCore()
                         .UseDbContext<ApplicationDbContext>();
-                });
-
-            services.AddOpenIddict()
-                .AddCore(options =>
-                {
-                    options
-                        .UseEntityFrameworkCore()
-                        .UseDbContext<ApplicationDbContext>();
                 })
                 .AddServer(options =>
                 {
@@ -130,9 +125,11 @@ namespace Cierge
                         .EnableUserinfoEndpoint("/api/userinfo")
                         .EnableIntrospectionEndpoint("/api/introspect");
 
-                    options.AllowAuthorizationCodeFlow()
-                        .AllowPasswordFlow()
-                        .AllowRefreshTokenFlow();
+                    options
+                        //.AllowImplicitFlow()    
+                        .AllowAuthorizationCodeFlow()
+                        .AllowRefreshTokenFlow()
+                        ;
 
                     options.UseJsonWebTokens();
 
@@ -141,7 +138,7 @@ namespace Cierge
                         OpenIdConnectConstants.Scopes.OpenId,
                         OpenIdConnectConstants.Scopes.Email,
                         OpenIdConnectConstants.Scopes.Profile,
-                        //OpenIdConnectConstants.Scopes.OfflineAccess,
+                        OpenIdConnectConstants.Scopes.OfflineAccess, // for refresh tokens
                         OpenIddictConnectConstants.Scopes.Roles
                     );
 
@@ -239,7 +236,7 @@ namespace Cierge
                 {
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
-                        ValidateIssuer = false, // TODO: make configurable
+                        ValidateIssuer = false, // TODO: try turning this on // TODO: make configurable // TODO: How does this work / what does it do?
                         ValidateIssuerSigningKey = true,
                         IssuerSigningKey = SigningKey
                     };
@@ -289,6 +286,8 @@ namespace Cierge
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
             });
+
+            InitializeAsync(app.ApplicationServices).GetAwaiter().GetResult();
         }
 
         public RSAParameters GetRsaSigningKey()
