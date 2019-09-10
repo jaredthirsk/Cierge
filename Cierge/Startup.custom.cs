@@ -75,6 +75,8 @@ namespace Cierge
 
         private async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
         {
+            logger.LogInformation($"Initializing with domain '{Domain}' and subdomains '{Subdomains}");
+
             using (var serviceScope = services.GetRequiredService<IServiceScopeFactory>().CreateScope())
             {
                 var context = serviceScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -107,6 +109,10 @@ namespace Cierge
                                 Name = scope,
                                 Resources = { scope },
                             });
+                            logger.LogInformation("Scope of '{scope}' registered");
+                        } else
+                        {
+                            logger.LogInformation("Scope of '{scope}' already registered");
                         }
                     }
                 }
