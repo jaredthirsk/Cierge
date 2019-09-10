@@ -31,7 +31,7 @@ namespace Cierge
         public IEnumerable<string> Subdomains => Configuration["OpenIddict:Subdomains"].ToStringArray().Select(item => item == "null" ? null : item) ?? DefaultSubdomains;
 
         public IEnumerable<string> DefaultSubdomains { get; } = new string[] { null, "dev", "test" };
-        private string ScopeForSubdomain(string subdomain = "") => ReversedDomain + (subdomain.Contains("test") ? ".test" : "");
+        private string ScopeForSubdomain(string subdomain = "") => ReversedDomain + ((subdomain ?? "").Contains("test") ? ".test" : "");
 
         #endregion
 
@@ -109,13 +109,25 @@ namespace Cierge
                                 Name = scope,
                                 Resources = { scope },
                             });
-                            logger.LogInformation("Scope of '{scope}' registered");
-                        } else
+                            logger.LogInformation($"Scope of '{scope}' registered");
+                        }
+                        else
                         {
-                            logger.LogInformation("Scope of '{scope}' already registered");
+                            logger.LogInformation($"Scope of '{scope}' already registered");
                         }
                     }
                 }
+
+                // Create roles
+                //var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+                //string[] roleNames = { "Administrator" };
+                //foreach (var roleName in roleNames)
+                //{
+                //    if (!await roleManager.RoleExistsAsync(roleName))
+                //    {
+                //        await roleManager.CreateAsync(new IdentityRole(roleName));
+                //    }
+                //}
             }
         }
     }

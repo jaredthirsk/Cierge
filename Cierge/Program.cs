@@ -45,41 +45,11 @@ namespace Cierge
 
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
+                //.ConfigureLogging(c =>
+                //{
+                //    c.AddConsole();
+                //})
                 .UseStartup<Startup>()
                 .Build();
-/*
-
-        private static async Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken)
-        {
-            using (var scope = services.GetRequiredService<IServiceScopeFactory>().CreateScope())
-            {
-                // Add OpenIddict clients
-                var iddictManager = scope.ServiceProvider.GetRequiredService<OpenIddictApplicationManager<OpenIddictApplication>>();
-                if (await iddictManager.FindByClientIdAsync("client-app", cancellationToken) == null)
-                {
-                    var descriptor = new OpenIddictApplicationDescriptor
-                    {
-                        ClientId = "client-app",
-                        DisplayName = "Test Client App",
-                        PostLogoutRedirectUris = { new Uri("http://localhost:8000/signout-oidc") },
-                        RedirectUris = { new Uri("http://localhost:8000/signin-oidc") },
-                    };
-
-                    await iddictManager.CreateAsync(descriptor, cancellationToken);
-                }
-
-                // Create roles
-                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-                string[] roleNames = { "Administrator" };
-                foreach (var roleName in roleNames)
-                {
-                    if (!await roleManager.RoleExistsAsync(roleName))
-                    {
-                        await roleManager.CreateAsync(new IdentityRole(roleName));
-                    }
-                }
-            }
-        }
-       */ 
     }
 }
