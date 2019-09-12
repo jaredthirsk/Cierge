@@ -29,6 +29,7 @@ namespace Cierge
         public string ReversedDomain => Configuration["OpenIddict:Domain"].ReverseDomain();
 
         public IEnumerable<string> Subdomains => Configuration["OpenIddict:Subdomains"].ToStringArray().Select(item => item == "null" ? null : item) ?? DefaultSubdomains;
+        public string SubdomainsString => Subdomains.Aggregate((x, y) => $"{x}, {y}");
 
         public IEnumerable<string> DefaultSubdomains { get; } = new string[] { null, "dev", "test" };
         private string ScopeForSubdomain(string subdomain = "") => ReversedDomain + ((subdomain ?? "").Contains("test") ? ".test" : "");
@@ -75,7 +76,7 @@ namespace Cierge
 
         private async Task InitializeAsync(IServiceProvider services)
         {
-            logger.LogInformation($"Initializing with domain '{Domain}' and subdomains '{Subdomains}");
+            logger.LogInformation($"Initializing with domain '{Domain}' and subdomains '{SubdomainsString}");
 
             using (var serviceScope = services.GetRequiredService<IServiceScopeFactory>().CreateScope())
             {
