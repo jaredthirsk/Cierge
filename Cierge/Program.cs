@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using OpenIddict.Core;
 using OpenIddict.Mvc;
 using OpenIddict.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace Cierge
 {
@@ -45,6 +46,9 @@ namespace Cierge
 
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((context, config) => 
+                    config.AddJsonFile("config/appsettings.json", optional: true)
+                )
                 //.ConfigureLogging(c =>
                 //{
                 //    c.AddConsole();

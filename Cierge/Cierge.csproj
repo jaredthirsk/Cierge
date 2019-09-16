@@ -5,6 +5,14 @@
     <UserSecretsId>aspnet-PwdLess-FFAEA828-6DB7-405C-8E94-8A5EB7C69E53</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="appsettings.json.sample" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json.sample" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="BuildBundlerMinifier" Version="2.9.406" />
