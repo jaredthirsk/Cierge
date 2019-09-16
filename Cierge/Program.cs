@@ -47,7 +47,7 @@ namespace Cierge
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((context, config) => 
-                    config.AddJsonFile("config/appsettings.json", optional: true)
+                    config.AddJsonFile("config/appsettings.json", optional: false)
                 )
                 //.ConfigureLogging(c =>
                 //{
