@@ -36,11 +36,11 @@ namespace Cierge.Controllers {
         }
 
         [HttpGet ("~/connect/authorize")]
-        public async Task<IActionResult> Authorize (OpenIdConnectRequest request) {
+        public async Task<IActionResult> Authorize (OpenIdConnectRequest connectRequest) {
             if (!User.Identity.IsAuthenticated) {
                 // If the client application request promptless authentication,
                 // return an error indicating that the user is not logged in.
-                if (request.HasPrompt (OpenIdConnectConstants.Prompts.None)) {
+                if (connectRequest.HasPrompt (OpenIdConnectConstants.Prompts.None)) {
                     var properties = new AuthenticationProperties (new Dictionary<string, string> {
                         [OpenIdConnectConstants.Properties.Error] = OpenIdConnectConstants.Errors.LoginRequired,
                         [OpenIdConnectConstants.Properties.ErrorDescription] = "The user is not logged in."
@@ -60,7 +60,7 @@ namespace Cierge.Controllers {
             }
 
             // Create a new authentication ticket.
-            var ticket = await CreateTicketAsync (request, user);
+            var ticket = await CreateTicketAsync (connectRequest, user);
 
             // Returning a SignInResult will ask OpenIddict to issue the appropriate access/identity tokens.
             return SignIn (ticket.Principal, ticket.Properties, ticket.AuthenticationScheme);

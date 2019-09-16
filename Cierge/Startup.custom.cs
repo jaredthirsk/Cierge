@@ -16,6 +16,7 @@ namespace Cierge
     {
         public static IEnumerable<string> ToStringArray(this string itemsAsString)
         {
+            if (string.IsNullOrWhiteSpace(itemsAsString)) return Enumerable.Empty<string>();
             return itemsAsString.Split(' ');
         }
 
