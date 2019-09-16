@@ -59,6 +59,7 @@ namespace Cierge
 
                     Permissions =
                             {
+                                OpenIddictConstants.Permissions.Endpoints.Token,
                                 OpenIddictConstants.Permissions.Endpoints.Authorization,
                                 OpenIddictConstants.Permissions.Endpoints.Logout,
                                 OpenIddictConstants.Permissions.Prefixes.Scope + OpenIddictConstants.Scopes.Email,
