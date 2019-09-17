@@ -50,13 +50,13 @@ namespace Cierge
 
         private async Task AddApplicationIfMissing(OpenIddictApplicationManager<OpenIddictApplication> manager, string subdomain = null)
         {
-            var subdomainSuffix = string.IsNullOrEmpty(subdomain) ? "" : ("." + subdomain);
+            //var subdomainSuffix = string.IsNullOrEmpty(subdomain) ? "" : ("." + subdomain);
             var subdomainPrefix = string.IsNullOrEmpty(subdomain) ? "" : (subdomain + ".");
             var callbackUri = $"http://{subdomainPrefix}{Domain}{CallbackUriPath}";
             var fullDomain = subdomainPrefix + Domain;
             var scope = ScopeForSubdomain(subdomain);
 
-            var clientId = subdomainSuffix + Domain;
+            var clientId = subdomainPrefix + Domain;
 
             var existing = await manager.FindByClientIdAsync(clientId);
             if (existing == null || DeleteExistingApplications)
