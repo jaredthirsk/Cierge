@@ -52,7 +52,7 @@ namespace Cierge
         {
             //var subdomainSuffix = string.IsNullOrEmpty(subdomain) ? "" : ("." + subdomain);
             var subdomainPrefix = string.IsNullOrEmpty(subdomain) ? "" : (subdomain + ".");
-            var callbackUri = $"http://{subdomainPrefix}{Domain}{CallbackUriPath}";
+            var callbackUri = $"https://{subdomainPrefix}{Domain}{CallbackUriPath}";
             var fullDomain = subdomainPrefix + Domain;
             var scope = ScopeForSubdomain(subdomain);
 
