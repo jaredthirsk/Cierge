@@ -53,15 +53,18 @@ namespace Cierge
                 var descriptor = new OpenIddictApplicationDescriptor
                 {
                     ClientId = clientId,
+                    
                     DisplayName = fullDomain, // ENH: Make configurable
                     PostLogoutRedirectUris = { new Uri($"https://{subdomainPrefix}{Domain}/logged-out") },
                     RedirectUris = { new Uri($"http://{subdomainPrefix}{Domain}/oidc/redirect") },
 
                     Permissions =
                             {
-                                OpenIddictConstants.Permissions.Endpoints.Token,
                                 OpenIddictConstants.Permissions.Endpoints.Authorization,
                                 OpenIddictConstants.Permissions.Endpoints.Logout,
+                                OpenIddictConstants.Permissions.Endpoints.Token,
+                                OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                                OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
                                 OpenIddictConstants.Permissions.Prefixes.Scope + OpenIddictConstants.Scopes.Email,
                                 OpenIddictConstants.Permissions.Prefixes.Scope + OpenIddictConstants.Scopes.OpenId,
                                 OpenIddictConstants.Permissions.Prefixes.Scope + OpenIddictConstants.Scopes.Profile,
