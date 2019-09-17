@@ -27,13 +27,13 @@ namespace Cierge
         #region Parameters
 
         public string Domain => Configuration["OpenIddict:Domain"];
-        public string ReversedDomain => Configuration["OpenIddict:Domain"].ReverseDomain();
+        //public string ReversedDomain => Configuration["OpenIddict:Domain"].ReverseDomain();
 
         public IEnumerable<string> Subdomains => Configuration["OpenIddict:Subdomains"].ToStringArray().Select(item => item == "null" ? null : item) ?? DefaultSubdomains;
         public string SubdomainsString => Subdomains.Aggregate((x, y) => $"{x}, {y}");
 
         public IEnumerable<string> DefaultSubdomains { get; } = new string[] { null, "dev", "test" };
-        private string ScopeForSubdomain(string subdomain = "") => ReversedDomain + ((subdomain ?? "").Contains("test") ? ".test" : "");
+        private string ScopeForSubdomain(string subdomain = "") => ((subdomain ?? "").Contains("test") ? "test." : "") + Domain;
 
         public string CallbackUriPath => Configuration["OpenIddict:CallbackUriPath"] ?? "/oidc/callback";
 
@@ -46,7 +46,7 @@ namespace Cierge
             var fullDomain = subdomainPrefix + Domain;
             var scope = ScopeForSubdomain(subdomain);
 
-            var clientId = ReversedDomain + subdomainSuffix;
+            var clientId = subdomainSuffix + Domain;
 
             if (await manager.FindByClientIdAsync(clientId) == null)
             {
