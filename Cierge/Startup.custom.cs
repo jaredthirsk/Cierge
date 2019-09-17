@@ -96,7 +96,7 @@ namespace Cierge
 
         private async Task InitializeAsync(IServiceProvider services)
         {
-            logger.LogInformation($"Initializing with domain '{Domain}' and subdomains '{SubdomainsString}");
+            logger.LogInformation($"Initializing with domain '{Domain}' and subdomains '{SubdomainsString}'");
 
             using (var serviceScope = services.GetRequiredService<IServiceScopeFactory>().CreateScope())
             {
