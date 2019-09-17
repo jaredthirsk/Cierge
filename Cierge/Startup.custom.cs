@@ -43,6 +43,7 @@ namespace Cierge
         {
             var subdomainSuffix = string.IsNullOrEmpty(subdomain) ? "" : ("." + subdomain);
             var subdomainPrefix = string.IsNullOrEmpty(subdomain) ? "" : (subdomain + ".");
+            var callbackUri = $"http://{subdomainPrefix}{Domain}{CallbackUriPath}";
             var fullDomain = subdomainPrefix + Domain;
             var scope = ScopeForSubdomain(subdomain);
 
@@ -50,7 +51,7 @@ namespace Cierge
 
             if (await manager.FindByClientIdAsync(clientId) == null)
             {
-                logger.LogInformation($"Application at '{fullDomain}' being configured for scope '{scope}'");
+                logger.LogInformation($"Application at '{fullDomain}' being configured for scope '{scope}' with callback Uri: '{callbackUri}'");
 
                 var descriptor = new OpenIddictApplicationDescriptor
                 {
@@ -58,7 +59,7 @@ namespace Cierge
                     
                     DisplayName = fullDomain, // ENH: Make configurable
                     PostLogoutRedirectUris = { new Uri($"https://{subdomainPrefix}{Domain}/logged-out") },
-                    RedirectUris = { new Uri($"http://{subdomainPrefix}{Domain}{CallbackUriPath}") },
+                    RedirectUris = { new Uri(callbackUri) },
 
                     Permissions =
                             {
