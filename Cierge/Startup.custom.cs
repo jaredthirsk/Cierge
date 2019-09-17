@@ -39,6 +39,15 @@ namespace Cierge
 
         #endregion
 
+        public bool DeleteExistingApplications
+        {
+            get
+            {
+                if (bool.TryParse(Configuration["OpenIddict:DeleteExistingApplications"], out bool result)) return result;
+                return true;
+            }
+        }
+
         private async Task AddApplicationIfMissing(OpenIddictApplicationManager<OpenIddictApplication> manager, string subdomain = null)
         {
             var subdomainSuffix = string.IsNullOrEmpty(subdomain) ? "" : ("." + subdomain);
@@ -49,8 +58,11 @@ namespace Cierge
 
             var clientId = subdomainSuffix + Domain;
 
-            if (await manager.FindByClientIdAsync(clientId) == null)
+            var existing = await manager.FindByClientIdAsync(clientId);
+            if (existing == null || DeleteExistingApplications)
             {
+                if (existing != null) await manager.DeleteAsync(existing);
+
                 logger.LogInformation($"Application at '{fullDomain}' being configured for scope '{scope}' with callback Uri: '{callbackUri}'");
 
                 var descriptor = new OpenIddictApplicationDescriptor
