@@ -35,6 +35,8 @@ namespace Cierge
         public IEnumerable<string> DefaultSubdomains { get; } = new string[] { null, "dev", "test" };
         private string ScopeForSubdomain(string subdomain = "") => ReversedDomain + ((subdomain ?? "").Contains("test") ? ".test" : "");
 
+        public string CallbackUriPath => Configuration["OpenIddict:CallbackUriPath"] ?? "/oidc/callback";
+
         #endregion
 
         private async Task AddApplicationIfMissing(OpenIddictApplicationManager<OpenIddictApplication> manager, string subdomain = null)
@@ -56,7 +58,7 @@ namespace Cierge
                     
                     DisplayName = fullDomain, // ENH: Make configurable
                     PostLogoutRedirectUris = { new Uri($"https://{subdomainPrefix}{Domain}/logged-out") },
-                    RedirectUris = { new Uri($"http://{subdomainPrefix}{Domain}/oidc/redirect") },
+                    RedirectUris = { new Uri($"http://{subdomainPrefix}{Domain}{CallbackUriPath}") },
 
                     Permissions =
                             {
