@@ -63,7 +63,7 @@ namespace Cierge
             {
                 if (existing != null) await manager.DeleteAsync(existing);
 
-                logger.LogInformation($"Application at '{fullDomain}' being configured for scope '{scope}' with callback Uri: '{callbackUri}'");
+                logger.LogInformation($"Application at '{fullDomain}' with client id '{clientId}' being configured for scope '{scope}' with callback Uri: '{callbackUri}'");
 
                 var descriptor = new OpenIddictApplicationDescriptor
                 {
